@@ -1,0 +1,17 @@
+module MQTTasp_Types{
+
+    type charstring Topic;
+    type charstring Data;
+
+    type record MQTT_Data {    // kept for compatibility
+	    Data       data optional,
+	    Topic       pub optional,
+        Topic       sub optional
+    }
+
+    type record Sub_Message {
+        Topic      topic,     
+	    Data       data 
+    }
+    
+}

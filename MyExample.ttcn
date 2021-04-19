@@ -1,0 +1,90 @@
+/******************************************************************************
+* MQTTas测试demo
+*HelloW0,HelloW1,HelloW2测试用例用于测试发布订阅功能
+*HelloW3测试用例用于测试实时功能
+*
+* Contributors:
+*   ChangfengLi
+*
+******************************************************************************/
+module MyExample
+{
+import from MQTTasp_Types all;
+import from MQTTasp_PortType all;
+
+type component MTCType
+{
+  port MQTTasp_PT MyPCO;
+  var charstring device_name;
+}
+
+testcase device_test() runs on MTCType system MTCType
+{
+  var MQTT_Data send1 := {omit,omit,"register"};
+  var Sub_Message sub_name;
+  map(mtc:MyPCO, system:MyPCO);
+  MyPCO.send(send1);
+  MyPCO.receive(Sub_Message :?) -> value sub_name;
+  device_name := sub_name.data;
+  
+  setverdict(pass);
+  unmap(mtc:MyPCO, system:MyPCO);
+}
+
+testcase HelloW1() runs on MTCType system MTCType
+{
+  map(mtc:MyPCO, system:MyPCO);
+  log(device_name);
+  setverdict(pass);
+  unmap(mtc:MyPCO, system:MyPCO);
+}
+
+testcase HelloW2() runs on MTCType system MTCType
+{
+  timer T := 20.0;
+  map(mtc:MyPCO, system:MyPCO);
+  MyPCO.send("Good Bye!");
+  T.start;
+  alt {
+    [] MyPCO.receive({"TTCN-1","bye"}) { T.stop; setverdict(pass); }
+    [] T.timeout { setverdict(inconc); }
+    [] MyPCO.receive { T.stop; setverdict(fail); }
+  }
+  unmap(mtc:MyPCO, system:MyPCO);
+}
+
+testcase HelloW3() runs on MTCType system MTCType
+{
+  timer T := 20.0;
+  map(mtc:MyPCO, system:MyPCO);
+
+  var float time_start := now, time_send, time_receive;
+  var charstring str1 := "Good";
+  var charstring str2 := " ";
+  var Sub_Message str3;
+
+  MyPCO.send(str1 & str2 & "Bye!") -> timestamp time_send;
+  log(time_start);  
+  log(time_send);
+  T.start;
+  alt {
+    [] MyPCO.receive(Sub_Message :?) -> value str3{
+      T.stop; 
+     log(str3);
+      setverdict(pass); 
+      }
+    [] T.timeout { setverdict(inconc); }
+    //[] MyPCO.receive -> timestamp time_receive { T.stop; setverdict(fail); }
+  }
+  //log(time_receive);
+  unmap(mtc:MyPCO, system:MyPCO);
+}
+
+control
+{
+    execute(HelloW0());
+    execute(HelloW1());
+  //execute(HelloW2());
+  //execute(HelloW3());
+}
+}

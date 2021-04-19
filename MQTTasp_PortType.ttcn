@@ -1,0 +1,12 @@
+module MQTTasp_PortType
+{
+  import from MQTTasp_Types all;
+
+  type port MQTTasp_PT message realtime
+    {
+        out charstring;
+        out  MQTT_Data;
+        in Sub_Message;
+    }with{extension "provider"}
+
+}
