@@ -20,70 +20,67 @@ type component MTCType
 
 testcase device_test() runs on MTCType system MTCType
 {
-  var MQTT_Data send1 := {omit,omit,"register"};
-  var Sub_Message sub_name;
+  timer T := 10.0;
+  var float time_send, time_receive;
+  var Sub_Message register_name;
+  var MQTT_Data pub_register := {omit,omit,"register"};
   map(mtc:MyPCO, system:MyPCO);
-  MyPCO.send(send1);
-  MyPCO.receive(Sub_Message :?) -> value sub_name;
-  device_name := sub_name.data;
-  
-  setverdict(pass);
-  unmap(mtc:MyPCO, system:MyPCO);
-}
-
-testcase HelloW1() runs on MTCType system MTCType
-{
-  map(mtc:MyPCO, system:MyPCO);
-  log(device_name);
-  setverdict(pass);
-  unmap(mtc:MyPCO, system:MyPCO);
-}
-
-testcase HelloW2() runs on MTCType system MTCType
-{
-  timer T := 20.0;
-  map(mtc:MyPCO, system:MyPCO);
-  MyPCO.send("Good Bye!");
+  MyPCO.send(pub_register);
+  MyPCO.receive(Sub_Message :?) -> value register_name;
+  device_name := register_name.data;
+  var MQTT_Data pub_inquiry := {"inquiry",device_name & "_inquiry",device_name & "_inquiry_send"};
+  var MQTT_Data pub_broadcast := {"open",device_name & "_broadcast",device_name & "_broadcast_send"};
+  var MQTT_Data pub_delay := {"delay",device_name&"_delay",device_name & "_delay_send"};
+  var MQTT_Data pub_alarm := {"alarm",device_name&"_alarmt",device_name & "_alarm"};
+  var MQTT_Data pub_id := {"123456",device_name & "_id",omit};
+  var MQTT_Data pub_result := {"SUCCESS",device_name&"_result",omit};
+  MyPCO.send(pub_id);
+  MyPCO.send(pub_inquiry);
   T.start;
   alt {
-    [] MyPCO.receive({"TTCN-1","bye"}) { T.stop; setverdict(pass); }
-    [] T.timeout { setverdict(inconc); }
+    [] MyPCO.receive({device_name&"_inquiry_send","123456"}) { T.stop;}
+    [] T.timeout { log("timeout");setverdict(inconc); }
     [] MyPCO.receive { T.stop; setverdict(fail); }
   }
-  unmap(mtc:MyPCO, system:MyPCO);
-}
-
-testcase HelloW3() runs on MTCType system MTCType
-{
-  timer T := 20.0;
-  map(mtc:MyPCO, system:MyPCO);
-
-  var float time_start := now, time_send, time_receive;
-  var charstring str1 := "Good";
-  var charstring str2 := " ";
-  var Sub_Message str3;
-
-  MyPCO.send(str1 & str2 & "Bye!") -> timestamp time_send;
-  log(time_start);  
-  log(time_send);
+  MyPCO.send(pub_broadcast);
   T.start;
   alt {
-    [] MyPCO.receive(Sub_Message :?) -> value str3{
-      T.stop; 
-     log(str3);
-      setverdict(pass); 
-      }
-    [] T.timeout { setverdict(inconc); }
-    //[] MyPCO.receive -> timestamp time_receive { T.stop; setverdict(fail); }
+    [] MyPCO.receive({device_name&"_broadcast_send","open"}) { T.stop;}
+    [] T.timeout { log("timeout");setverdict(inconc); }
+    [] MyPCO.receive { T.stop; setverdict(fail); }
   }
-  //log(time_receive);
+  MyPCO.send(pub_alarm);
+  T.start;
+  alt {
+    [] MyPCO.receive({device_name&"_alarm","alarm"}) { T.stop;}
+    [] T.timeout { log("timeout");setverdict(inconc); }
+    [] MyPCO.receive { T.stop; setverdict(fail); }
+  }
+  T.start;
+  MyPCO.send(pub_delay) -> timestamp time_send;
+  alt {
+    [] MyPCO.receive({device_name&"_delay_send",?}) -> timestamp time_receive {T.stop;}
+    [] T.timeout { log("timeout");setverdict(inconc); }
+    [] MyPCO.receive { T.stop; setverdict(fail); }
+  }
+  log("RTT:",time_receive-time_send,"s");
+
+  if(time_receive-time_send<0.1){
+    MyPCO.send(pub_result);
+    setverdict(pass);
+  }else{
+    pub_result := {"FAIL",device_name&"_result",omit};
+    MyPCO.send(pub_result);
+    setverdict(fail);
+  }
+
   unmap(mtc:MyPCO, system:MyPCO);
 }
 
 control
 {
-    execute(HelloW0());
-    execute(HelloW1());
+    execute(device_test());
+    //execute(HelloW1());
   //execute(HelloW2());
   //execute(HelloW3());
 }

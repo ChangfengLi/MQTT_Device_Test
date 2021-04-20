@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
@@ -29,7 +30,7 @@ func main() {
 	sub(deviceName+"_broadcast", messagePubHandler)
 	sub(deviceName+"_delay", messagePubHandler)
 	sub(deviceName+"_result", messagePubHandler)
-
+	sub(deviceName+"_alarmt", messagePubHandler)
 
 	for i := 0; i <= 20; i++ {
 		fmt.Printf("--- %v\n", deviceID)
@@ -66,13 +67,15 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 			fmt.Printf("+----------------+\n")
 			fmt.Printf("|测试结果：SUCESS|\n")
 			fmt.Printf("+----------------+\n")
+			os.Exit(3)
 		} else {
 			fmt.Printf("+----------------+\n")
 			fmt.Printf("|测试结果：FAIL  |\n")
 			fmt.Printf("+----------------+\n")
+			os.Exit(3)
 		}
 	} else if reciveTopic == deviceName+"_alarmt" {
-                pub(deviceName+"_alarm", "alarm")
+		pub(deviceName+"_alarm", "alarm")
 	}
 
 }
